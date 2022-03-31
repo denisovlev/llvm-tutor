@@ -58,3 +58,5 @@ RUN mkdir -p $TUTOR_DIR/build \
     && cmake -DLT_LLVM_INSTALL_DIR=$LLVM_DIR ../ \
     && make -j $(nproc --all) \
     && lit test/
+
+ENV PATH "$LLVM_DIR"bin/:$PATH

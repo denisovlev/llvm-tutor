@@ -1,0 +1,14 @@
+# docker compose run --rm llvm-container
+
+version: "3.9"
+services:
+  llvm-container:
+    build:
+      context: .
+      dockerfile: ./Dockerfile_ubuntu_apt
+    volumes:
+      - .:/code
+    entrypoint: /bin/bash
+    env_file: .env
+#    command:
+#      - chmod -R +x /code/mypass/
