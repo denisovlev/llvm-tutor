@@ -7,32 +7,32 @@
 //
 // License: MIT
 //=============================================================================
-int foo(int a) {
-  int boo = 2;
-  while (a > 0) {
-    boo *= 2;
-    a /= 2;
+float foo(float a) {
+  float boo = 2;
+  while (a > 1) {
+    boo *= 2.1;
+    a /= 2.0;
   }
   return boo * 2;
 }
 
-int bar(int a, int b) {
-  return (a + foo(b) * 2);
+float bar(int a, int b) {
+  return (a + foo(b) * 2.4);
 }
 
-int fez(int a, int b, int c) {
-  return (a + bar(a, b) * 2 + c * 3);
+float fez(int a, int b, int c) {
+  return (a + bar(a, b) * 2.1 + c * 3);
 }
 
 int main(int argc, char *argv[]) {
   int a = 123;
-  int ret = 0;
+  float ret = 0;
 
   ret += foo(a);
   ret += bar(a, ret);
   ret += fez(a, ret, 123);
 
-  if (ret % 2 == 0) ret += 1;
+  if (ret / 2 > 10) ret += 1;
 
   return ret;
 }

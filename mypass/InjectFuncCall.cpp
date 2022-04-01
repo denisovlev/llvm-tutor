@@ -82,7 +82,7 @@ bool InjectFuncCall::runOnModule(Module &M) {
 
   // STEP 2: Inject a global variable that will hold the printf format string
   // ------------------------------------------------------------------------
-  llvm::Constant *PrintfFormatStr = llvm::ConstantDataArray::getString(CTX, "%s: %d\n");
+  llvm::Constant *PrintfFormatStr = llvm::ConstantDataArray::getString(CTX, "%s: %.17g\n");
 
   Constant *PrintfFormatStrVar =
       M.getOrInsertGlobal("PrintfFormatStr", PrintfFormatStr->getType());
@@ -103,7 +103,7 @@ bool InjectFuncCall::runOnModule(Module &M) {
       while (current != nullptr) {
         auto &Inst = *current;
         auto next = InstList.getNextNode(*current);
-        if (!Inst.isDebugOrPseudoInst() && Inst.getType()->isIntegerTy()) {
+        if (!Inst.isDebugOrPseudoInst() && Inst.getType()->isFloatingPointTy()) {
           Twine name = getVarName(counter);
           Inst.setName(name);
           counter++;
