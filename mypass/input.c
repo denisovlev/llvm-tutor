@@ -8,7 +8,12 @@
 // License: MIT
 //=============================================================================
 int foo(int a) {
-  return a * 2;
+  int boo = 2;
+  while (a > 0) {
+    boo *= 2;
+    a /= 2;
+  }
+  return boo * 2;
 }
 
 int bar(int a, int b) {
@@ -26,6 +31,8 @@ int main(int argc, char *argv[]) {
   ret += foo(a);
   ret += bar(a, ret);
   ret += fez(a, ret, 123);
+
+  if (ret % 2 == 0) ret += 1;
 
   return ret;
 }

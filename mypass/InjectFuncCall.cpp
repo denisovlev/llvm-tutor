@@ -40,11 +40,15 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Twine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "inject-func-call"
+
+Twine getVarName(long counter) {
+  return Twine("var") + Twine(counter);
+}
 
 //-----------------------------------------------------------------------------
 // InjectFuncCall implementation
@@ -78,8 +82,7 @@ bool InjectFuncCall::runOnModule(Module &M) {
 
   // STEP 2: Inject a global variable that will hold the printf format string
   // ------------------------------------------------------------------------
-  llvm::Constant *PrintfFormatStr = llvm::ConstantDataArray::getString(
-      CTX, "(llvm-tutor) Hello from: %s\n(llvm-tutor)   number of arguments: %d\n");
+  llvm::Constant *PrintfFormatStr = llvm::ConstantDataArray::getString(CTX, "%s: %d\n");
 
   Constant *PrintfFormatStrVar =
       M.getOrInsertGlobal("PrintfFormatStr", PrintfFormatStr->getType());
@@ -88,6 +91,7 @@ bool InjectFuncCall::runOnModule(Module &M) {
   // STEP 3: For each function in the module, inject a call to printf
   // ----------------------------------------------------------------
   IRBuilder<> Builder(CTX);
+  long counter = 0;
 
   for (auto &F : M) {
     if (!F.hasName() || F.isDeclaration())
@@ -100,12 +104,15 @@ bool InjectFuncCall::runOnModule(Module &M) {
         auto &Inst = *current;
         auto next = InstList.getNextNode(*current);
         if (!Inst.isDebugOrPseudoInst() && Inst.getType()->isIntegerTy()) {
+          Twine name = getVarName(counter);
+          Inst.setName(name);
+          counter++;
           if (next != nullptr) {
             Builder.SetInsertPoint(next);
           } else {
             Builder.SetInsertPoint(&BB.back());
           }
-          auto FuncName = Builder.CreateGlobalStringPtr(F.getName());
+          auto FuncName = Builder.CreateGlobalStringPtr(Inst.getName());
           // Printf requires i8*, but PrintfFormatStrVar is an array: [n x i8]. Add a cast: [n x i8] -> i8*
           llvm::Value *FormatStrPtr = Builder.CreatePointerCast(
               PrintfFormatStrVar, PrintfArgTy, "formatStr");
