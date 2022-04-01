@@ -87,44 +87,34 @@ bool InjectFuncCall::runOnModule(Module &M) {
 
   // STEP 3: For each function in the module, inject a call to printf
   // ----------------------------------------------------------------
+  IRBuilder<> Builder(CTX);
 
   for (auto &F : M) {
-    for (Instruction &Inst : reverse(instructions(F))) {
-      IRBuilder<> Builder(Inst.getNextNode());
-      auto FuncName = Builder.CreateGlobalStringPtr(F.getName());
-      // Printf requires i8*, but PrintfFormatStrVar is an array: [n x i8]. Add
-      // a cast: [n x i8] -> i8*
-      llvm::Value *FormatStrPtr =
-          Builder.CreatePointerCast(PrintfFormatStrVar, PrintfArgTy, "formatStr");
-      if (Inst.getType()->isIntegerTy()) {
-        InsertedAtLeastOnePrintf = true;
-        Builder.CreateCall(Printf, {FormatStrPtr, FuncName, &Inst});
+    if (!F.hasName() || F.isDeclaration())
+      continue;
+
+    for (auto &BB: F.getBasicBlockList()) {
+      auto &InstList = BB.getInstList();
+      auto current = InstList.getNextNode(InstList.front());
+      while (current != nullptr) {
+        auto &Inst = *current;
+        auto next = InstList.getNextNode(*current);
+        if (!Inst.isDebugOrPseudoInst() && Inst.getType()->isIntegerTy()) {
+          if (next != nullptr) {
+            Builder.SetInsertPoint(next);
+          } else {
+            Builder.SetInsertPoint(&BB.back());
+          }
+          auto FuncName = Builder.CreateGlobalStringPtr(F.getName());
+          // Printf requires i8*, but PrintfFormatStrVar is an array: [n x i8]. Add a cast: [n x i8] -> i8*
+          llvm::Value *FormatStrPtr = Builder.CreatePointerCast(
+              PrintfFormatStrVar, PrintfArgTy, "formatStr");
+          Builder.CreateCall(Printf, {FormatStrPtr, FuncName, &Inst});
+          InsertedAtLeastOnePrintf = true;
+        }
+        current = next;
       }
     }
-//    if (F.isDeclaration())
-//      continue;
-//
-//    // Get an IR builder. Sets the insertion point to the top of the function
-//    IRBuilder<> Builder(&*F.getEntryBlock().getFirstInsertionPt());
-//
-//    // Inject a global variable that contains the function name
-//    auto FuncName = Builder.CreateGlobalStringPtr(F.getName());
-//
-//    // Printf requires i8*, but PrintfFormatStrVar is an array: [n x i8]. Add
-//    // a cast: [n x i8] -> i8*
-//    llvm::Value *FormatStrPtr =
-//        Builder.CreatePointerCast(PrintfFormatStrVar, PrintfArgTy, "formatStr");
-//
-//    // The following is visible only if you pass -debug on the command line
-//    // *and* you have an assert build.
-//    LLVM_DEBUG(dbgs() << " Injecting call to printf inside " << F.getName()
-//                      << "\n");
-//
-//    // Finally, inject a call to printf
-//    Builder.CreateCall(
-//        Printf, {FormatStrPtr, FuncName, Builder.getInt32(F.arg_size())});
-//
-//    InsertedAtLeastOnePrintf = true;
   }
 
   return InsertedAtLeastOnePrintf;
