@@ -33,7 +33,6 @@
 #include "InjectFuncCall.h"
 
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
@@ -45,10 +44,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "inject-func-call"
-
-Twine getVarName(long counter) {
-  return Twine("var") + Twine(counter);
-}
 
 //-----------------------------------------------------------------------------
 // InjectFuncCall implementation
@@ -92,6 +87,11 @@ bool InjectFuncCall::runOnModule(Module &M) {
   // ----------------------------------------------------------------
   IRBuilder<> Builder(CTX);
   long counter = 0;
+  auto moduleName = M.getModuleIdentifier();
+
+  auto getVarName = [&moduleName](long counter) -> std::string {
+    return (Twine(moduleName) + Twine("::var") + Twine(counter)).str();
+  };
 
   for (auto &F : M) {
     if (!F.hasName() || F.isDeclaration())
@@ -104,8 +104,7 @@ bool InjectFuncCall::runOnModule(Module &M) {
         auto &Inst = *current;
         auto next = InstList.getNextNode(*current);
         if (!Inst.isDebugOrPseudoInst() && Inst.getType()->isFloatingPointTy()) {
-          Twine name = getVarName(counter);
-          Inst.setName(name);
+          Inst.setName(getVarName(counter));
           counter++;
           if (next != nullptr) {
             Builder.SetInsertPoint(next);
